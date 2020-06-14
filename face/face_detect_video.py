@@ -3,7 +3,7 @@ import cv2
 
 def detectFace(video):
     	
-    #創net必要的兩個檔案 1.model 2.prototxt
+    #創net必要的兩個檔案 1.model(訓練好的模型) 2.prototxt(模型架構)
     model = "./res10_300x300_ssd_iter_140000.caffemodel"
     prototxt = "./deploy.prototxt.txt"
     net = cv2.dnn.readNetFromCaffe(prototxt, model)
@@ -13,7 +13,7 @@ def detectFace(video):
 
     while True:
         _, frame = cap.read()
-        (h, w) = frame.shape[:2]
+        h, w = frame.shape[:2] #height width 
         #blob 直接翻譯為二進位大型物件 binary large object
         #先將圖片resize為300x300在傳進去,最後一項為normalize因數
         blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
