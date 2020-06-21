@@ -7,17 +7,24 @@ from calibration import calibration
 
 def detectFace():
 
-    tholdValue = calibration()    
-
     #取得檔案路徑後, 在其後加上欲讀取檔案名稱
     dir_path = os.path.dirname(__file__)
+    
+    ## threshold校正
+    tholdValue, pupilCenter = calibration()
+    print('校正數值')
+    print('threshold  : ', tholdValue)
+    print('pupilCenter: ', pupilCenter)
+
     #創net必要的兩個檔案 1.model(訓練好的模型) 2.prototxt(模型架構)
     model = os.path.join(dir_path, "res10_300x300_ssd_iter_140000.caffemodel")
     prototxt = os.path.join(dir_path, "deploy.prototxt.txt")
     net = cv2.dnn.readNetFromCaffe(prototxt, model)
 
     cap = cv2.VideoCapture(0) #設0的話就是用攝像頭畫面
-    predictor = dlib.shape_predictor("shape_predictor_5_face_landmarks.dat")
+
+    predictor_path = os.path.join(dir_path, "shape_predictor_5_face_landmarks.dat")
+    predictor = dlib.shape_predictor(predictor_path)
     while True:
         _, frame = cap.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -57,7 +64,7 @@ def detectFace():
                 # print(min_x, max_x, min_y, max_y)
                 #若太近, 則不繼續, 並顯示太近
                 if min_x > 500:
-                    cv2.putText(frame, 'Too close', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
+                    cv2.putText(frame, 'Too close', (50,150), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), 3)
                     continue
                 gray_eye = cv2.cvtColor(eye, cv2.COLOR_BGR2GRAY)  #灰階處理    
                 gray_eye = cv2.GaussianBlur(gray_eye, (7, 7), 0) #模糊化, 去除一些雜訊
@@ -69,12 +76,15 @@ def detectFace():
                     cv2.putText(frame, 'Blink', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,0,0), 3)
                     continue
                 for cnt in contours:
-                    cv2.drawContours(eye, [cnt], -1, (0, 0, 255), 3)  #arg為(原圖, 輪廓座標, -1為顯示全部輪廓, 顏色, 線寬)
+                    # cv2.drawContours(eye, [cnt], -1, (0, 0, 255), 3)  #arg為(原圖, 輪廓座標, -1為顯示全部輪廓, 顏色, 線寬)
+                    
                     # 取出能包圍瞳孔輪廓的最小矩形
                     # xy為左上角原點, wh為寬高 (須注意xy為相對於眼部區域的矩形左上角原點的距離, 並非原圖)
                     (x, y, w, h) = cv2.boundingRect(cnt)
+
                     # 用矩形框出瞳孔位置
-                    cv2.rectangle(eye, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                    # cv2.rectangle(eye, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
                     # 以瞳孔矩形定出中心線, 線延伸到眼部矩形
                     cv2.line(eye,(x + int(w/2), 0),(x + int(w/2), width),(0,255,0),2)
                     cv2.line(eye,(0, y + int(h/2)),(height, y + int(h/2)),(0,255,0),2)
@@ -86,9 +96,9 @@ def detectFace():
                     # cv2.putText(影像, 文字, 座標, 字型, 大小, 顏色, 線條寬度, 線條種類)
                     # 水平偵測
                     
-                    if hr_ratio < 40: 
+                    if   hr_ratio < pupilCenter - 15: 
                         cv2.putText(frame, 'Right', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,255,0), 3) 
-                    elif hr_ratio > 70:
+                    elif hr_ratio > pupilCenter + 15:
                         cv2.putText(frame, 'Left', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,255,0), 3)
                     else:
                         cv2.putText(frame, 'Center', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,255,0), 3)
